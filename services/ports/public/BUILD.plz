@@ -1,0 +1,9 @@
+go_library(
+    name = "public",
+    srcs = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
+    visibility = ["PUBLIC"],
+    deps = [],
+)

@@ -1,0 +1,18 @@
+syntax = "proto3";
+package api.v1;
+
+import "protos/commons/general.proto";
+import "google/api/annotations.proto";
+
+option go_package = "https://github.com/jcfug8/daylier-backend/protos/api/v1";
+
+service API {
+  rpc Ping(commons.PingReq) returns (commons.PingRes) {
+    // Client example - returns the first shelf:
+    //   curl http://DOMAIN_NAME/v1/shelves/1
+    option (google.api.http) = {
+      post : "/v1/ping"
+      body : "*"
+    };
+  }
+}
