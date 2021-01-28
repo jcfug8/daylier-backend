@@ -1,21 +1,29 @@
 package grpc
 
 import (
-	"log"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/jcfug8/daylier-backend/services/ports/public"
+
+	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 )
 
 // Server - defines a dialer
 type Server interface {
-	Serve(settings ...service.Setting) (Server, error)
+	Serve() (Server, error)
 }
 
 type CSServer struct {
 	addr    string
-	service service.Service
+	service public.GRPCService
 }
 
-func NewCSServer(addr string, service service.Service) *CSServer {
+// NewCSServer -
+func NewCSServer(addr string, service public.GRPCService) *CSServer {
 	return &CSServer{
 		addr:    addr,
 		service: service,
@@ -23,22 +31,37 @@ func NewCSServer(addr string, service service.Service) *CSServer {
 }
 
 func (d *CSServer) Serve() error {
-	server, err := grpc.Serve(
-		service.WithService(d.service),
-		service.WithAddr(d.addr),
-		service.WithReflection(true),
-	)
-
+	lis, err := net.Listen("tcp", d.addr)
 	if err != nil {
-		log.Warningf("could not serve %s grpc: %v", d.service.Name(), err)
+		log.Errorf("failed to listen at %s grpc: %v", d.addr, err)
+	}
+
+	// create a grpc server object
+	grpcServer := grpc.NewServer()
+
+	err = d.service.Register(grpcServer)
+	if err != nil {
+		log.Warningf("could not register %s grpc: %v", d.service.Name(), err)
 		return err
 	}
 
-	log.Infof("%s grpc started", d.service.Name())
-	if err = server.Block(); err != nil {
-		log.Warnf("could not close %s server: %v", d.service.Name(), err)
+	var sig os.Signal
+
+	go func() {
+		ch := make(chan os.Signal, 1)
+		signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+		sig = <-ch
+		log.Info("signal %s received in %s grpc", sig, d.service.Name())
+		grpcServer.GracefulStop()
+	}()
+
+	// start the server
+	if err := grpcServer.Serve(lis); err != nil {
+		log.Errorf("failed to serve: %s", err)
 		return err
 	}
+
+	d.service.Close()
 
 	return nil
 }

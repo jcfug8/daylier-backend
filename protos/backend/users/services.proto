@@ -3,7 +3,7 @@ package backend.users;
 
 import "protos/commons/general.proto";
 
-option go_package = "https://github.com/jcfug8/daylier-backend/protos/backend/users";
+option go_package = "github.com/jcfug8/daylier-backend/protos/backend/users";
 
 service UsersAPI { rpc Ping(commons.PingReq) returns (commons.PingRes); }
 

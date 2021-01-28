@@ -1,4 +1,4 @@
 syntax = "proto3";
 package backend.users;
 
-option go_package = "https://github.com/jcfug8/daylier-backend/protos/backend/users";
+option go_package = "github.com/jcfug8/daylier-backend/protos/backend/users";

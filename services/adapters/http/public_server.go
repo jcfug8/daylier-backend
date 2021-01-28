@@ -1,14 +1,14 @@
 package http
 
 import (
-	standHTTP "net/http"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	log "git.tcncloud.net/m/neo/commons/logging"
+	"github.com/jcfug8/daylier-backend/services/ports/public"
 
-	"git.tcncloud.net/m/neo/services/omnichannel/email/dispatcher/ports/http"
+	log "github.com/sirupsen/logrus"
 )
 
 // Server - defines a dialer
@@ -18,10 +18,10 @@ type Server interface {
 
 type CSServer struct {
 	addr    string
-	service http.Service
+	service public.HTTPService
 }
 
-func NewCSServer(addr string, service http.Service) *CSServer {
+func NewCSServer(addr string, service public.HTTPService) *CSServer {
 	return &CSServer{
 		addr:    addr,
 		service: service,
@@ -29,14 +29,14 @@ func NewCSServer(addr string, service http.Service) *CSServer {
 }
 
 func (d *CSServer) Serve() error {
-	serveMux := standHTTP.NewServeMux()
-	server := &standHTTP.Server{
+	serveMux := http.NewServeMux()
+	server := &http.Server{
 		Addr:    d.addr,
 		Handler: serveMux,
 	}
 	err := d.service.Register(serveMux)
 	if err != nil {
-		log.Warningf("could not register %s http: %v", d.service.Name(), err)
+		log.Warningf("could not register %s service to http server: %v", d.service.Name(), err)
 		return err
 	}
 
@@ -46,14 +46,17 @@ func (d *CSServer) Serve() error {
 		ch := make(chan os.Signal, 1)
 		signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 		sig = <-ch
+		log.Infof("signal '%s' received for http server with %s service", sig, d.service.Name())
 		server.Close()
 	}()
 
-	log.Infof("%s http started", d.service.Name())
-	if err = server.ListenAndServe(); err != nil && err != standHTTP.ErrServerClosed {
-		log.Warnf("could not close %s server: %v", d.service.Name(), err)
+	log.Infof("http server with %s service started", d.service.Name())
+	if err = server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Warnf("could not close http server with %s service: %v", d.service.Name(), err)
 		return err
 	}
+
+	d.service.Close()
 
 	return nil
 }

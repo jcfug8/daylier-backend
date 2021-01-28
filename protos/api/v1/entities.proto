@@ -1,4 +1,4 @@
 syntax = "proto3";
 package api.v1;
 
-option go_package = "https://github.com/jcfug8/daylier-backend/protos/api/v1";
+option go_package = "github.com/jcfug8/daylier-backend/protos/api/v1";
